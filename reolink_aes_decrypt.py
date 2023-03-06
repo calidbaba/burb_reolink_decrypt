@@ -4,8 +4,8 @@ from burp import IMessageEditorTab
 import subprocess
 import json
 
-# nonce = ""
-# cnonce = ""
+nonce = ""
+cnonce = ""
 #should be configured in burp
 # PASSWORD = "carlerkul2"
 PASSWORD = "fredrikerkulere"
@@ -73,8 +73,8 @@ class AesDecryptTab(IMessageEditorTab):
         # return isRequest and not self._extender._helpers.getRequestParameter(content, "data") is None
         
     def setMessage(self, content, isRequest):
-        if not isRequest:
-            print("not request!!!", self._extender._helpers.bytesToString(content))
+        global nonce
+        global cnonce
         if content is None:
             # clear our display
             self._txtInput.setText(None)
@@ -90,12 +90,18 @@ class AesDecryptTab(IMessageEditorTab):
                 x = json.loads(body)
                 self.nonce = x[0]["param"]["Digest"]["Nonce"]
                 self.cnonce = x[0]["param"]["Digest"]["Cnonce"]
-                print("nonce and cnonce have been set", self.nonce, self.cnonce)
+                nonce = x[0]["param"]["Digest"]["Nonce"]
+                cnonce = x[0]["param"]["Digest"]["Cnonce"]
+                print("noncer ble satt", self.nonce, self.cnonce)
             except:
-                print("Could not find json")
-            print("Nonce, Cnonce:", self.nonce, self.cnonce)
-            args = ["python", "command_line_decrypt.py",PASSWORD, self.nonce, self.cnonce, IV, "True", body]
-            print("args: ", args)
+                print("no json")
+            print("noncer", self.nonce, self.cnonce)
+            if not isRequest:
+                print("not request, noncer", nonce, cnonce)
+                print("not request!!! lalala", body)
+            # args = ["python", "command_line_decrypt.py",PASSWORD, self.nonce, self.cnonce, IV, "True", body]
+            args = ["python", "command_line_decrypt.py",PASSWORD, nonce, cnonce, IV, "True", body]
+            print("args ", args)
             decrypt = run_external(args)
             print("decrypt request: ", decrypt)
             if len(decrypt) > 5:
