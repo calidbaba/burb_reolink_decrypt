@@ -8,7 +8,7 @@ import json
 # cnonce = ""
 #should be configured in burp
 # PASSWORD = "carlerkul2"
-PASSWORD = "carlerkul2"
+PASSWORD = "fredrikerkulere"
 IV = "bcswebapp1234567"
 
 #since jython does not support pycrodome library, we have to use a separate script for encryption, and decryption.
@@ -90,12 +90,12 @@ class AesDecryptTab(IMessageEditorTab):
                 x = json.loads(body)
                 self.nonce = x[0]["param"]["Digest"]["Nonce"]
                 self.cnonce = x[0]["param"]["Digest"]["Cnonce"]
-                print("noncer ble satt", self.nonce, self.cnonce)
+                print("nonce and cnonce have been set", self.nonce, self.cnonce)
             except:
-                print("no json")
-            print("noncer", self.nonce, self.cnonce)
+                print("Could not find json")
+            print("Nonce, Cnonce:", self.nonce, self.cnonce)
             args = ["python", "command_line_decrypt.py",PASSWORD, self.nonce, self.cnonce, IV, "True", body]
-            print("args ", args)
+            print("args: ", args)
             decrypt = run_external(args)
             print("decrypt request: ", decrypt)
             if len(decrypt) > 5:
@@ -106,7 +106,7 @@ class AesDecryptTab(IMessageEditorTab):
     
     def getMessage(self):
         # determine whether the user modified the deserialized data
-        print("getmess")
+        print("getmessage()")
         if self._txtInput.isTextModified():
             print("getmess inni")
             modifiedBody = self._txtInput.getText()
