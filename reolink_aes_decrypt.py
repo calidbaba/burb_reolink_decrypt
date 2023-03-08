@@ -9,7 +9,7 @@ nonce = ""
 cnonce = ""
 
 #The password of your device. TODO: make this configurable in burb
-PASSWORD = "carlerkul2"
+PASSWORD = "insert your password here"
 
 #Taken from the javascript of the device, seems to always be bcswebapp1234567
 IV = "bcswebapp1234567"
