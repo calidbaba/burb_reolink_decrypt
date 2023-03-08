@@ -4,16 +4,18 @@ from burp import IMessageEditorTab
 import subprocess
 import json
 
+#for some reason if i have these as class members, they get overwritten all the time
 nonce = ""
 cnonce = ""
-#should be configured in burp
-# PASSWORD = "carlerkul2"
-PASSWORD = "fredrikerkulere"
+
+#The password of your device. TODO: make this configurable in burb
+PASSWORD = "carlerkul2"
+
+#Taken from the javascript of the device, seems to always be bcswebapp1234567
 IV = "bcswebapp1234567"
 
 #since jython does not support pycrodome library, we have to use a separate script for encryption, and decryption.
 def run_external(payload):
-    #https://github.com/externalist/aes-encrypt-decrypt-burp-extender-plugin-example
     proc = subprocess.Popen(payload,stdout=subprocess.PIPE)
     output = proc.stdout.read().strip()
     proc.stdout.close()
@@ -54,13 +56,7 @@ class AesDecryptTab(IMessageEditorTab):
         # create an instance of Burp's text editor, to display our deserialized data
         self._txtInput = extender._callbacks.createTextEditor()
         self._txtInput.setEditable(editable)
-        self.nonce = ""
-        self.cnonce = ""
         
-    #
-    # implement IMessageEditorTab
-    #
-
     def getTabCaption(self):
         return "Decrypted body"
         
@@ -68,9 +64,7 @@ class AesDecryptTab(IMessageEditorTab):
         return self._txtInput.getComponent()
         
     def isEnabled(self, content, isRequest):
-        # enable this tab for requests containing a data parameter
         return True
-        # return isRequest and not self._extender._helpers.getRequestParameter(content, "data") is None
         
     def setMessage(self, content, isRequest):
         global nonce
@@ -81,29 +75,27 @@ class AesDecryptTab(IMessageEditorTab):
             self._txtInput.setEditable(False)
 
         else:
+            #get info about the request
             analyzedRequest = self._extender._helpers.analyzeRequest(content)
             
+            #find the offset of the body so we can extract it
             body_offset = analyzedRequest.getBodyOffset()
 
             body = self._extender._helpers.bytesToString(content)[body_offset:]
+            #check for nonce and cnonce in the json, which means you are at the login screen
+            #set the values in global variables
             try:
                 x = json.loads(body)
                 self.nonce = x[0]["param"]["Digest"]["Nonce"]
                 self.cnonce = x[0]["param"]["Digest"]["Cnonce"]
                 nonce = x[0]["param"]["Digest"]["Nonce"]
                 cnonce = x[0]["param"]["Digest"]["Cnonce"]
-                print("noncer ble satt", self.nonce, self.cnonce)
             except:
                 print("no json")
-            print("noncer", self.nonce, self.cnonce)
-            if not isRequest:
-                print("not request, noncer", nonce, cnonce)
-                print("not request!!! lalala", body)
-            # args = ["python", "command_line_decrypt.py",PASSWORD, self.nonce, self.cnonce, IV, "True", body]
+            #decrypt the body with external script
             args = ["python", "command_line_decrypt.py",PASSWORD, nonce, cnonce, IV, "True", body]
-            print("args ", args)
             decrypt = run_external(args)
-            print("decrypt request: ", decrypt)
+            
             if len(decrypt) > 5:
                 self._txtInput.setText(decrypt)
                 self._txtInput.setEditable(self._editable)
@@ -112,27 +104,18 @@ class AesDecryptTab(IMessageEditorTab):
     
     def getMessage(self):
         # determine whether the user modified the deserialized data
-        print("getmessage()")
         if self._txtInput.isTextModified():
-            print("getmess inni")
             modifiedBody = self._txtInput.getText()
-            print("hvordan ser denne ut?", modifiedBody)
             modifiedBody  = self._extender._helpers.bytesToString(self._txtInput.getText())
             
-            # input = self._extender._helpers.urlEncode(self._extender._helpers.base64Encode(text))
-            #base64 encode first, so nullbytes are not lost in translation
-            # modifiedBody = base64.b64encode(modifiedBody)
-            # print(modifiedBody)
+            #encrypt the message again if its been modified
             args = ["python", "command_line_decrypt.py",PASSWORD, self.nonce, self.cnonce, IV, "False", modifiedBody]
-            print("args encrypt ", args)
             decrypt = run_external(args)
-            print("encrypted request: ", decrypt)
-            # update the request with the new parameter value
+
             currentAnalyzed = self._extender._helpers.analyzeRequest(self._currentMessage)
             body_offset = currentAnalyzed.getBodyOffset()
             current_without_message = self._extender._helpers.bytesToString(self._currentMessage)[:body_offset]
             updated_request = current_without_message + decrypt
-            print("updated: ", updated_request)
             self._currentMessage = self._extender._helpers.stringToBytes(updated_request)
 
         return self._currentMessage
